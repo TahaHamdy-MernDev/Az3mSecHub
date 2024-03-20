@@ -22,7 +22,7 @@ router.post("/register", async (req, res) => {
       generateTokenAndSetCookie(newUser._id, res);
       res.status(200).json({
         _id: newUser._id,
-        fristName: newUser.fristName,
+        fristName: newUser.firstName,
         lastName: newUser.lastName,
         email: newUser.email,
         isAdmin: newUser.isAdmin,
@@ -36,24 +36,27 @@ router.post("/register", async (req, res) => {
 // Login
 router.post("/login", async (req, res) => {
   try {
-    const user = await User.findOne({ email: req.body.email });
-    !user && res.status(404).json("User not Found 😥");
+    const { email, password } = req.body;
 
-    const validatePassword = bcrypt.compareSync(
-      req.body.password,
-      user.password
-    );
-    !validatePassword && res.status(404).json("Wrong Password 😥");
+    if (!email || !password) {
+      return res
+        .status(400)
+        .json({ message: "Please provide both email and password." });
+    }
+
+    const user = await User.findOne({ email });
+    if (!user) {
+      return res.status(404).json({ message: "User not found." });
+    }
+
+    const validatePassword = await bcrypt.compare(password, user.password);
+    if (!validatePassword) {
+      return res.status(401).json({ message: "Invalid credentials." });
+    }
 
     generateTokenAndSetCookie(user._id, res);
 
-    res.status(200).json({
-      _id: user._id,
-      fristName: user.fristName,
-      lastName: user.lastName,
-      email: user.email,
-      isAdmin: user.isAdmin,
-    });
+    res.status(200).json({ user });
   } catch (error) {
     res.status(500).json({ error: error.message });
   }
