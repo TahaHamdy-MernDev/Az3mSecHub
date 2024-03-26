@@ -42,8 +42,17 @@ router.get("/get-info", async (req, res) => {
 
 router.delete("/delete/:id", async (req, res) => {
   try {
-    await Post.findByIdAndDelete(req.params.id);
-    res.status(200).json({ message: "Post Deleted Successful 🥰" });
+    const post = await Post.findOne({ _id: req.params.id }); 
+    if (!post) {
+      return res.status(404).json({ message: "Post not found" });
+    }
+    
+    if (post.isInfo === true) {
+      return res.status(403).json({ message: "Cannot delete informational post" });
+    }
+
+    await post.deleteOne();
+    res.status(200).json({ message: "Post Deleted Successfully 🥰" });
   } catch (error) {
     res.status(500).json({ error: error.message });
   }
