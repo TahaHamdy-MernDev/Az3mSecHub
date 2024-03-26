@@ -6,28 +6,47 @@ const {
   generateTokenAndSetCookie,
 } = require("../utils/generateTokenAndSetCookie");
 
-// Register
 router.post("/register", async (req, res) => {
   try {
-    // Check User
-    const user = await User.findOne({ email: req.body.email });
-    user && res.status(400).json({ error: "User already exists 🙄🧐" });
+    const { email, password, firstName, lastName } = req.body;
 
-    const salt = bcrypt.genSalt(10);
-    const hashPassword = bcrypt.hashSync(req.body.password, parseInt(salt));
-    const newUser = new User({ ...req.body, password: hashPassword });
+    // Input validation
+    if (!email || !password || !firstName || !lastName) {
+      return res.status(400).json({ error: "Please provide all required fields." });
+    }
+
+    // Validate email format
+    const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailPattern.test(email)) {
+      return res.status(400).json({ error: "Invalid email format." });
+    }
+
+    // Check for existing user
+    const existingUser = await User.findOne({ email });
+    if (existingUser) {
+      return res.status(400).json({ error: "User already exists." });
+    }
+
+    // Asynchronous password hashing
+    const salt = await bcrypt.genSalt(10);
+    const hashPassword = await bcrypt.hash(password, salt);
+
+    // Create new user
+    const newUser = new User({
+      email,
+      password: hashPassword,
+      firstName,
+      lastName
+    });
+
     await newUser.save();
 
-    if (newUser) {
-      generateTokenAndSetCookie(newUser._id, res);
-      res.status(200).json({
-        _id: newUser._id,
-        fristName: newUser.firstName,
-        lastName: newUser.lastName,
-        email: newUser.email,
-        isAdmin: newUser.isAdmin,
-      });
-    } else res.status(400).json({ error: "Invalid user data 😥" });
+    res.status(200).json({
+      _id: newUser._id,
+      firstName: newUser.firstName,
+      lastName: newUser.lastName,
+      email: newUser.email,
+    });
   } catch (error) {
     res.status(500).json({ error: error.message });
   }
@@ -54,9 +73,14 @@ router.post("/login", async (req, res) => {
       return res.status(401).json({ message: "Invalid credentials." });
     }
 
-    generateTokenAndSetCookie(user._id, res);
+    const token = generateTokenAndSetCookie(user._id, res);
+  res.cookie('token', token, {
+    httpOnly: true,
+    secure: process.env.NODE_ENV === 'production', 
+    sameSite: 'strict',
+  });
 
-    res.status(200).json({ user });
+    res.status(200).json({ user , token });
   } catch (error) {
     res.status(500).json({ error: error.message });
   }
