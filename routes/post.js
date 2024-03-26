@@ -3,7 +3,6 @@ const router = express.Router();
 const Post = require("../models/Post");
 const { protectedRoute } = require("../utils/protectedRoute");
 
-// Create
 router.post("/create", async (req, res) => {
   try {
     const newPost = new Post({ ...req.body });
@@ -14,7 +13,6 @@ router.post("/create", async (req, res) => {
   }
 });
 
-// Get (ID)
 router.get("/get/:id", async (req, res) => {
   try {
     const findPost = await Post.findById(req.params.id);
@@ -24,17 +22,24 @@ router.get("/get/:id", async (req, res) => {
     res.status(500).json({ error: error.message });
   }
 });
-// Get (ALL)
+
 router.get("/all/get", async (req, res) => {
   try {
-    const getAllPosts = await Post.find();
+    const getAllPosts = await Post.find({ isInfo: false });
     res.status(200).json(getAllPosts);
   } catch (error) {
     res.status(400).json("Error Get Post !!~");
   }
 });
+router.get("/get-info", async (req, res) => {
+  try {
+    const info = await Post.findOne({ isInfo: true });
+    res.status(200).json(info);
+  } catch (error) {
+    res.status(400).json("Error Get Post !!~");
+  }
+});
 
-// Delete
 router.delete("/delete/:id", async (req, res) => {
   try {
     await Post.findByIdAndDelete(req.params.id);
@@ -43,7 +48,7 @@ router.delete("/delete/:id", async (req, res) => {
     res.status(500).json({ error: error.message });
   }
 });
-//UPDATE POST
+
 router.put("/update/:id", async (req, res) => {
   try {
     const post = await Post.findById(req.params.id);
